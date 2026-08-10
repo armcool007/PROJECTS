@@ -1,0 +1,63 @@
+pipeline {
+    agent any
+    parameters{
+        choice(
+            name: 'ACTION',
+            choices: ['apply','destroy'],
+            description: 'Select Terraform action to perform'
+            )
+    }
+    environment {
+        TF_WORKING_DIR="${WORKSPACE}"
+    }
+    stages {
+        stage('git') {
+            steps {
+                git branch: 'main', url: 'https://github.com/armcool007/PROJECTS.git'
+            }
+        }
+        stage('terraform-init'){
+            steps{
+                dir("${TF_WORKING_DIR}"){
+                    sh 'terraform init'
+                }
+            }
+        }
+        stage('terraform validate'){
+            steps{
+                dir("${TF_WORKING_DIR}"){
+                    sh 'terraform validate'
+                    sh 'echo validated successfully'   
+                }
+            }
+        }
+        stage('terraform apply'){
+            when {
+                expression { params.ACTION == 'apply'}
+            }
+            steps{
+                dir("${TF_WORKING_DIR}"){
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+        stage('Terraform Destroy'){
+                when{
+                    expression{ params.ACTION == 'destroy'}
+                }
+                steps{
+                    dir("${TF_WORKING_DIR}"){
+                      sh 'terraform destroy --auto-approve'
+                    }
+                }
+        }
+    }
+    post {
+        success {
+            echo "Terraform ${params.ACTION} completed successfully!"
+        }
+        failure {
+            echo "Terraform ${params.ACTION} failed. Check logs above."
+        }
+}
+}
